@@ -68,10 +68,15 @@ class WifiLedShopLight(LightEntity):
                 self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 self._sock.settimeout(self._timeout)
                 self._sock.connect((self._ip, self._port))
+                
+                _LOGGER.debug(f"Sending raw data ({self._ip}: {self.name}): {raw_data} to {self._ip}:{self._port}")
+                
                 self._sock.sendall(bytes(raw_data))
-                if command == command.GET_ID or command == command.SYNC:
+                if command in (Command.GET_ID, Command.SYNC):
                     result = self._sock.recv(1024)
         
+                _LOGGER.debug(f"Received data ({self._ip}: {self.name}): {result}")
+                
                 self._sock.shutdown(socket.SHUT_RDWR)
                 self._sock.close()
                 self._sock = None
@@ -86,8 +91,9 @@ class WifiLedShopLight(LightEntity):
 
     def set_color(self, r=0, g=0, b=0):
         r, g, b = map(clamp, (r, g, b))
+        _LOGGER.debug(f"Setting color: R={r}, G={g}, B={b} for {self._name} ({self._ip})")
         self._state.color = (r, g, b)
-        self.send_command(Command.SET_COLOR, [int(r), int(g), int(b)])
+        response = self.send_command(Command.SET_COLOR, [int(r), int(g), int(b)])
 
     def set_brightness(self, brightness=0):
         brightness = clamp(brightness)
@@ -107,23 +113,28 @@ class WifiLedShopLight(LightEntity):
         initial_state = self._state.is_on
         self.send_command(Command.TOGGLE, [])
         self.update()
-        _LOGGER.warning(f"Toggle! {self._ip}: {self._name} - Current state is: {self._state.is_on}")
+        _LOGGER.debug(f"Toggle! {self._ip}: {self._name} - Current state is: {self._state.is_on}")
         while initial_state == self._state.is_on:
             sleep(0.5)
             self.toggle()
 
     def turn_on(self, **kwargs):
+        _LOGGER.debug(f"turn_on called with kwargs: {kwargs}")
         if ATTR_BRIGHTNESS in kwargs:
+            _LOGGER.debug(f"Setting brightness to {kwargs[ATTR_BRIGHTNESS]} for {self._name}")
             self.set_brightness(kwargs[ATTR_BRIGHTNESS])
-        if ATTR_HS_COLOR in kwargs:
-            r, g, b = color_util.color_hs_to_RGB(*kwargs[ATTR_HS_COLOR])
+        if "rgb_color" in kwargs:  # Prüfung auf rgb_color
+            r, g, b = kwargs["rgb_color"]
+            _LOGGER.debug(f"RGB Color detected: R={r}, G={g}, B={b}")
             self.set_color(r, g, b)
         if ATTR_EFFECT in kwargs:
+            _LOGGER.debug(f"Setting effect to {kwargs[ATTR_EFFECT]} for {self._name}")
             self.set_effect(kwargs[ATTR_EFFECT])
         if not self._state.is_on:
+            _LOGGER.debug(f"Light {self._name} is off, toggling it on.")
             self.toggle()
         else:
-            _LOGGER.debug(f"Already on ({self._ip}: {self._name})")
+            _LOGGER.debug(f"Light {self._name} is already on")
     
     def turn_off(self):
         if self._state.is_on:
@@ -145,7 +156,7 @@ class WifiLedShopLight(LightEntity):
             "identifiers": {("wifi-led-strip-controller", self._unique_id)},
             "manufacturer": "BTF-LIGHTING",
             "name": self._name,
-            "model": "sp108e",
+            "model": "SP108E",
         }
 
     @property
@@ -162,8 +173,18 @@ class WifiLedShopLight(LightEntity):
 
     @property
     def hs_color(self):
+        """Return the current color in HS format."""
         r, g, b = self._state.color
-        return color_util.color_RGB_to_hs(r, g, b)
+        h, s = color_util.color_RGB_to_hs(r, g, b)
+        _LOGGER.debug(f"Current HS color: H={h}, S={s} (from RGB: R={r}, G={g}, B={b})")
+        return h, s
+        
+    @property
+    def rgb_color(self):
+        """Return the current color in RGB format."""
+        r, g, b = self._state.color
+        _LOGGER.debug(f"Current RGB color is: R={r}, G={g}, B={b}")
+        return self._state.color
 
     @property
     def effect_list(self):
@@ -176,7 +197,17 @@ class WifiLedShopLight(LightEntity):
 
     @property
     def supported_color_modes(self):
-        return {ColorMode.RGB, ColorMode.BRIGHTNESS}
+        return {ColorMode.RGB}
+
+    @property
+    def color_mode(self):
+        """Return the color mode of the light."""
+        effects = {**MONO_EFFECTS, **PRESET_EFFECTS}
+        current_effect = next((key for key, val in effects.items() if val == self._state.mode), None)
+    
+        if current_effect == "Solid (custom color)":
+            return ColorMode.RGB
+        return ColorMode.BRIGHTNESS
 
     @property
     def supported_features(self):
