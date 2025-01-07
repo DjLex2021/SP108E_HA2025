@@ -1,13 +1,14 @@
 {
-  "domain": "sp108e_ws2815",
-  "name": "sp108e_ws2815",
+  "domain": "SP108E",
+  "name": "SP108E",
   "config_flow": true,
-  "documentation": "https://www.home-assistant.io/integrations/sp108e_ws2815",
+  "documentation": "",
   "requirements": [],
   "ssdp": [],
   "zeroconf": [],
   "homekit": {},
   "dependencies": [],
-  "codeowners": ["@samhstein"],
-  "version": "0.2.1"
+  "codeowners": ["@DjLex2021"],
+  "version": "0.1.1"
 }
+
