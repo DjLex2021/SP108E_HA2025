@@ -7,7 +7,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities):
-    """Set up sp108e_ws2815 lights."""
+    """Set up sp108e lights."""
     host = entry.data.get("host")
     name = entry.data.get("name")
     
