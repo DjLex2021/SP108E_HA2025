@@ -102,9 +102,13 @@ class WifiLedShopLight(LightEntity):
 
     def set_effect(self, effect):
         effects = {**MONO_EFFECTS, **PRESET_EFFECTS}
+        current_effect = next((key for key, val in effects.items() if val == self._state.mode), None)
         preset = clamp(effects.get(effect, 0))
         self._state.mode = preset
         self.send_command(Command.SET_PRESET, [int(preset)])
+        if current_effect == "Solid (custom color)":
+            sleep(0.5)
+            self.send_command(Command.SET_PRESET, [int(preset)]) # 2nd time
 
     def toggle(self):
         """
@@ -126,6 +130,11 @@ class WifiLedShopLight(LightEntity):
         if "rgb_color" in kwargs:  # Prüfung auf rgb_color
             r, g, b = kwargs["rgb_color"]
             _LOGGER.debug(f"RGB Color detected: R={r}, G={g}, B={b}")
+            effects = {**MONO_EFFECTS, **PRESET_EFFECTS}
+            current_effect = next((key for key, val in effects.items() if val == self._state.mode), None)
+            if current_effect != "Solid (custom color)":
+                self.set_effect('Solid (custom color)')
+                sleep(0.5)
             self.set_color(r, g, b)
         if ATTR_EFFECT in kwargs:
             _LOGGER.debug(f"Setting effect to {kwargs[ATTR_EFFECT]} for {self._name}")
