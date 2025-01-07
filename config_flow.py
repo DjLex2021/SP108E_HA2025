@@ -1,4 +1,3 @@
-"""Config flow for sp108e_ws2815 integration."""
 import logging
 
 import voluptuous as vol
