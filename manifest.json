@@ -2,7 +2,7 @@
   "domain": "SP108E",
   "name": "SP108E",
   "config_flow": true,
-  "documentation": "",
+  "documentation": "https://github.com/DjLex2021/SP108E_HA2025/tree/config-flow",
   "requirements": [],
   "ssdp": [],
   "zeroconf": [],
