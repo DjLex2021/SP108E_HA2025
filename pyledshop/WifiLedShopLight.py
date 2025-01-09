@@ -14,12 +14,13 @@ from homeassistant.components.light import (
     LightEntityFeature
 )
 import homeassistant.util.color as color_util
+from homeassistant.helpers.entity import EntityCategory
 from time import sleep
 
 _LOGGER = logging.getLogger(__name__)
 
 class WifiLedShopLight(LightEntity):
-    def __init__(self, ip, name, port=8189, timeout=1, retries=5):
+    def __init__(self, ip, name, port=8189, timeout=3, retries=5):
         self._name = name
         self._ip = ip
         self._port = port
@@ -110,6 +111,11 @@ class WifiLedShopLight(LightEntity):
             sleep(0.5)
             self.send_command(Command.SET_PRESET, [int(preset)]) # 2nd time
 
+    def set_speed(self, speed):
+        """Set the effect speed."""
+        self._state.speed = speed
+        self.send_command(Command.SET_SPEED, [speed])
+
     def toggle(self):
         """
         Toggles the state of the light without checking the current state
@@ -153,10 +159,6 @@ class WifiLedShopLight(LightEntity):
 
     @property
     def unique_id(self):
-        if not self._unique_id:
-            result = self.send_command(Command.GET_ID, [])
-            if result:
-                self._unique_id = result.decode('utf-8')
         return self._unique_id
 
     @property
@@ -167,6 +169,11 @@ class WifiLedShopLight(LightEntity):
             "name": self._name,
             "model": "SP108E",
         }
+
+    @property
+    def entity_category(self):
+        """Set the entity category (optional)."""
+        return EntityCategory.CONFIG
 
     @property
     def name(self):
@@ -203,6 +210,19 @@ class WifiLedShopLight(LightEntity):
     def effect(self):
         effects = {**MONO_EFFECTS, **PRESET_EFFECTS}
         return next((key for key, val in effects.items() if val == self._state.mode), None)
+
+    @property
+    def effect_speed(self):
+        """Return the current effect speed."""
+        return self._state.speed
+
+    @property
+    def extra_state_attributes(self):
+        """Return optional state attributes."""
+        return {
+            "effect_speed": self.effect_speed,
+            "effect": self.effect
+        }
 
     @property
     def supported_color_modes(self):
